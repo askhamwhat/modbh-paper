@@ -6,8 +6,132 @@ c      in two dimensions.
 c
 c-----------------------------------------------------------------------
 c
+C***********************************************************************
+      subroutine l2dformmp_add(ier,rscale,source,charge,ns,center,
+     1     nterms,mpole)
+      implicit real *8 (a-h,o-z)
+C***********************************************************************
+c
+c     This subroutine constructs a multipole expansion about CENTER due
+c     to NS sources located at SOURCES(2,*).
+c
+c     mpole_0  =  sum charge_j 
+c                  j  
+c
+c     mpole_n  = -sum charge_j 1/n (z)^n /rscale^n
+c                  j  
+c
+c-----------------------------------------------------------------------
+c     INPUT:
+c
+c     rscale          : the scaling factor.
+c     source(2,ns)    : coordinates of sources
+c     charge(ns)      : source strengths
+c     ns              : number of sources
+c     center(2)       : expansion center
+c     nterms          : order of multipole expansion
+c
+c     OUTPUT:
+c
+c     ier       : error return code
+c                 ier=0 returned successfully;
+c
+c     mpole     : coeffs for the multipole-expansion
+c
+        complex *16 mpole(0:nterms),charge(ns)
+        real *8 center(2),source(2,ns),zdiff(2)
+
+        complex *16 zmul,zinv,ztemp1,ztemp2
+c
+        complex *16 ima,z,z0
+        data ima/(0.0d0,1.0d0)/
 c
 c
+
+        do j=1,ns
+c
+        zdiff(1)=source(1,j)-center(1)
+        zdiff(2)=source(2,j)-center(2)
+ccc        call h2cart2polar(zdiff,r,theta)
+        z0=dcmplx(zdiff(1),zdiff(2))
+c
+        mpole(0)=mpole(0)+charge(j)
+c
+        ztemp1=z0/rscale
+        ztemp2=ztemp1
+        do n=1,nterms
+        mpole(n)=mpole(n)-charge(j)*ztemp1/n
+        ztemp1=ztemp1*ztemp2
+        enddo
+
+        enddo
+
+        return
+        end
+c
+c      
+c     
+      subroutine l2dformmp_dp_add(ier,rscale,source,dipstr,ns,center,
+     1     nterms,mpole)
+      implicit real *8 (a-h,o-z)
+C***********************************************************************
+c
+c     This subroutine constructs a multipole expansion about CENTER due
+c     to NS sources located at SOURCES(2,*).
+c
+c     mpole_0  =  0
+c                 
+c
+c     mpole_n  =  sum dipstr_j (z_0)^(n-1)/z^n /rscale^n
+c                  j  
+c
+c-----------------------------------------------------------------------
+c     INPUT:
+c
+c     rscale          : the scaling factor.
+c     source(2,ns)    : coordinates of sources
+c     dipstr(ns)      : source strengths
+c     ns              : number of sources
+c     center(2)       : expansion center
+c     nterms          : order of multipole expansion
+c
+c     OUTPUT:
+c
+c     ier       : error return code
+c                 ier=0 returned successfully;
+c
+c     mpole     : coeffs for the multipole-expansion
+c     
+      complex *16 mpole(0:nterms),dipstr(ns)
+      real *8 center(2),source(2,ns),zdiff(2)
+
+      complex *16 zmul,zinv,ztemp1,ztemp2
+c     
+      complex *16 ima,z,z0
+      data ima/(0.0d0,1.0d0)/
+c     
+c     
+      do j=1,ns
+c     
+         zdiff(1)=source(1,j)-center(1)
+         zdiff(2)=source(2,j)-center(2)
+ccc   call h2cart2polar(zdiff,r,theta)
+         z0=dcmplx(zdiff(1),zdiff(2))
+c     
+c     
+         zmul=z0/rscale
+         ztemp1=1/rscale
+         do n=1,nterms
+            mpole(n)=mpole(n)+dipstr(j)*ztemp1
+            ztemp1=ztemp1*zmul
+         enddo
+
+      enddo
+
+      return
+      end
+c     
+c     
 C***********************************************************************
       subroutine l2dformmp_qp(ier,rscale,source,quadstr,quadvec,
      $     ns,center,nterms,mpole)

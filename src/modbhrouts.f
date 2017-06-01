@@ -248,49 +248,15 @@ c     global variables
       real *8 beta, zx(2), zy(2), pot, grad(2), hess(3)
       integer ifpot, ifgrad, ifhess
 c     local variables
-      real *8 r, r2, dx, dy, g0, g1, g2, g3, temp1, dx2, dy2
-      real *8 r3, pi
-      integer if0, if1, if2, if3
+      real *8 der3(4), der4(5), der5(6)
+      integer ifder3, ifder4, ifder5
 
-      pi = 4.0d0*datan(1.0d0)
-
-      if0 = 1
-      if1 = 0
-      if2 = 0
-      if3 = 0
-
-      if (ifgrad .eq. 1) if1 = 1
-      if (ifhess .eq. 1) then
-         if1 = 1
-         if2 = 1
-      endif
-
-      dx = zx(1)-zy(1)
-      dy = zx(2)-zy(2)
-
-      dx2 = dx**2
-      dy2 = dy**2
-
-      r2 = dx2 + dy2
-      r = dsqrt(r2)
-
-      call difflogbk(r,beta,if0,g0,if1,g1,if2,g2,if3,g3)
-
-      temp1 = 2.0d0*pi*beta**2
+      ifder3 = 0
+      ifder4 = 0
+      ifder5 = 0
       
-      if (ifpot .eq. 1) pot = g0/temp1
-      
-      if (ifgrad .eq. 1) then
-         grad(1) = g1*dx/r/temp1
-         grad(2) = g1*dy/r/temp1
-      endif
-
-      if (ifhess .eq. 1) then
-         r3 = r**3
-         hess(1) = (g2*dx2/r2 + g1*(r2-dx2)/r3)/temp1
-         hess(2) = (g2*dx*dy/r2-g1*dx*dy/r3)/temp1
-         hess(3) = (g2*dy2/r2 + g1*(r2-dy2)/r3)/temp1
-      endif
+      call modbhgreen_all(beta,zx,zy,ifpot,pot,ifgrad,grad,
+     1     ifhess,hess,ifder3,der3,ifder4,der4,ifder5,der5)
 
       return
       end
@@ -329,70 +295,39 @@ c     global variables
       real *8 beta, zx(2), zy(2), pot, grad(2), hess(3), dir1(2)
       integer ifpot, ifgrad, ifhess
 c     local variables
-      real *8 r, r2, dx, dy, g0, g1, g2, g3, temp1, dx2, dy2
-      real *8 r3, pi, r4, r5
-      real *8 g, gx, gy, gxx, gxy, gyy, gxxx, gxxy, gxyy, gyyy
-      real *8 gxxxx, gxxxy, gxxyy, gxyyy, gyyyy
-      integer if0, if1, if2, if3
+      real *8 potloc, gradloc(2), hessloc(3), der3(4), der4(5)
+      real *8 der5(6)
+      integer ifder3, ifder4, ifder5, ifpotloc, ifgradloc, ifhessloc
 
-      pi = 4.0d0*datan(1.0d0)
+      ifpotloc = 0
+      ifgradloc = 0
+      ifhessloc = 0
+      ifder3 = 0
+      ifder4 = 0
+      ifder5 = 0
 
-      if0 = 1
-      if1 = 1
-      if2 = 0
-      if3 = 0
+      if (ifpot .eq. 1) ifgradloc = 1
+      if (ifgrad .eq. 1) ifhessloc = 1
+      if (ifhess .eq. 1) ifder3 = 1
 
-      if (ifgrad .eq. 1) if2 = 1
-      if (ifhess .eq. 1) then
-         if2 = 1
-         if3 = 1
-      endif
+      call modbhgreen_all(beta,zx,zy,ifpotloc,potloc,ifgradloc,gradloc,
+     1     ifhessloc,hessloc,ifder3,der3,ifder4,der4,ifder5,der5)
 
-      dx = zx(1)-zy(1)
-      dy = zx(2)-zy(2)
-
-      dx2 = dx**2
-      dy2 = dy**2
-
-      r2 = dx2 + dy2
-      r = dsqrt(r2)
-      r3 = r*r2
-
-      call difflogbk(r,beta,if0,g0,if1,g1,if2,g2,if3,g3)
-
-      temp1 = 2.0d0*pi*beta**2
-      
       if (ifpot .eq. 1) then
-         pot = -(g1*dir1(1)*dx/r/temp1+g1*dir1(2)*dy/r/temp1)
+         pot = -dir1(1)*gradloc(1)-dir1(2)*gradloc(2)
       endif
-      
-      if (ifgrad .eq. 1) then
-         grad(2) = -dir1(1)*(g2*dx*dy/r2-g1*dx*dy/r3)/temp1
-     1        - dir1(2)*(g2*dy2/r2 + g1*dx2/r3)/temp1
-         grad(1) = -dir1(1)*(g2*dx2/r2 + g1*dy2/r3)/temp1
-     1        - dir1(2)*(g2*dx*dy/r2-g1*dx*dy/r3)/temp1
 
+      if (ifgrad .eq. 1) then
+         grad(1) = -dir1(1)*hessloc(1) - dir1(2)*hessloc(2)
+         grad(2) = -dir1(1)*hessloc(2) - dir1(2)*hessloc(3)
       endif
 
       if (ifhess .eq. 1) then
-         r4 = r2**2
-         r5 = r3*r2
-         gxxx = g3*dx2*dx/r3 + 3.0d0*g2*dx*dy2/r4 
-     1        -3.0d0*g1*dx*dy2/r5
-         gxxy = g3*dx2*dy/r3 - 3.0d0*g2*dx2*dy/r4
-     1        + g2*dy/r2 + 3.0d0*g1*dx2*dy/r5
-     2        - g1*dy/r3
-         gxyy = g3*dy2*dx/r3 - 3.0d0*g2*dy2*dx/r4
-     1        + g2*dx/r2 + 3.0d0*g1*dy2*dx/r5
-     2        - g1*dx/r3
-         gyyy = g3*dy2*dy/r3 + 3.0d0*g2*dy*dx2/r4 
-     1        -3.0d0*g1*dy*dx2/r5
-
-         hess(1) = -dir1(1)*gxxx/temp1 - dir1(2)*gxxy/temp1
-         hess(2) = -dir1(1)*gxxy/temp1 - dir1(2)*gxyy/temp1
-         hess(3) = -dir1(1)*gxyy/temp1 - dir1(2)*gyyy/temp1
+         hess(1) = -dir1(1)*der3(1) - dir1(2)*der3(2)
+         hess(2) = -dir1(1)*der3(2) - dir1(2)*der3(3)
+         hess(3) = -dir1(1)*der3(3) - dir1(2)*der3(4)
       endif
-
+      
       return
       end
 
@@ -834,7 +769,8 @@ c         ips0 = 0.0d0
             yh2p = yh2p*yh2/(p+1.0d0)
          enddo
 
-         diffs(0) = 0.5d0*kps0-lnyh*ips0 - dlog(betah)
+          diffs(0) = 0.5d0*kps0-lnyh*ips0 - dlog(betah)
+c         diffs(0) = 0.5d0*kps0-lnyh*ips0
 c         diffs(0) = 0.5d0*kps0-lnyh*ips0 + dlog(x)
          diffs(1) = (lnyh*ips1*yh-0.5d0*yh*kps1)*rscale
 

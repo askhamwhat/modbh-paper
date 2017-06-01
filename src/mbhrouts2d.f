@@ -2094,6 +2094,98 @@ c
       return
       end
 
+      subroutine mbh2dformta_all(ier,beta,rscale,src,ifcharge,charge,
+     1     ifdipole,dipstr,dipvec,ifquad,quadstr,quadvec,ifoct,octstr,
+     2     octvec,ns,center,nterms,mbhmpole,ympole)
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+c
+c
+c
+cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      implicit none
+c     global variables
+      integer ier, ns, nterms, ifcharge, ifdipole, ifquad, ifoct
+      real *8 beta, rscale, src(2,*), charge(*), dipstr(*), dipvec(2,*)
+      real *8 quadstr(*), quadvec(3,*), octstr(*), octvec(4,*),center(2)
+      complex *16 mbhmpole(0:nterms), ympole(0:nterms)
+c     local variables
+      integer iii, nterms1, i
+      complex *16 ima,hexpmbh(0:3),hexpy(0:3)
+      complex *16 mbhtemp(0:100), ytemp(0:100)
+      real *8 pi, rs2
+c     
+      data ima/(0.0d0,1.0d0)/
+c     
+
+      pi = 4.0d0*datan(1.0d0)
+
+      do i = 0,nterms
+         mbhmpole(i) = 0
+         ympole(i) = 0
+      enddo
+
+      nterms1 = 0
+      if (ifdipole .eq. 1) nterms1 = 1
+      if (ifquad .eq. 1) nterms1 = 2
+      if (ifoct .eq. 1) nterms1 = 3
+
+      rs2 = rscale*rscale 
+
+      do iii = 1,ns
+
+         hexpmbh(0) = 0.0d0
+         hexpmbh(1) = 0.0d0
+         hexpmbh(2) = 0.0d0
+         hexpmbh(3) = 0.0d0
+
+         hexpy(0) = 0.0d0
+         hexpy(1) = 0.0d0
+         hexpy(2) = 0.0d0
+         hexpy(3) = 0.0d0
+
+         if (ifcharge .eq. 1) then
+            hexpmbh(0) = hexpmbh(0) + charge(iii)/(2.0d0*pi*beta**2)
+         endif
+
+         if (ifdipole .eq. 1) then
+            hexpmbh(1) = hexpmbh(1) + dipstr(iii)*(dipvec(1,iii)+
+     1           ima*dipvec(2,iii))/(rscale*2.0d0*pi*beta)
+         endif
+
+         if (ifquad .eq. 1) then
+            hexpmbh(2) = hexpmbh(2) + quadstr(iii)*(quadvec(1,iii)
+     1           +quadvec(2,iii)*ima
+     2           -quadvec(3,iii))/(rs2*4.0d0*pi)
+
+            hexpy(0) = quadstr(iii)*(quadvec(1,iii)
+     1           +quadvec(3,iii))/(4.0d0*pi)
+         endif
+
+         if (ifoct .eq. 1) then
+            hexpmbh(3) = hexpmbh(3) + beta*octstr(iii)*(octvec(1,iii) 
+     1           + ima*octvec(2,iii) - octvec(3,iii) 
+     2           -ima*octvec(4,iii))/(rs2*rscale*8.0d0*pi)
+            hexpy(1) = hexpy(1) + beta*octstr(iii)*(3.0d0*octvec(1,iii)
+     1           + ima*octvec(2,iii) + octvec(3,iii) 
+     2           + 3.0d0*ima*octvec(4,iii))/(rscale*8.0d0*pi)
+         endif
+
+         call mbh2dmploc(beta,rscale,src(1,iii),hexpmbh,hexpy,
+     1        nterms1,rscale,center,mbhtemp,ytemp,nterms)
+
+
+         do i = 0,nterms
+            mbhmpole(i) = mbhmpole(i) + mbhtemp(i)
+            ympole(i) = ympole(i) + ytemp(i)
+         enddo
+
+        
+      enddo
+      
+
+      return
+      end
+
 
       subroutine mbh2dformta_qp(ier,beta,rscale,source,quadstr,quadvec,
      1     ns,center,nterms,mbhloc,lloc)

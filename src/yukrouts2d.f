@@ -154,15 +154,15 @@ c
         pi = 4.0d0*datan(1.0d0)
         pieye2=pi*ima/2.0d0
 c
-        allocate(hval(0:nterms+5), stat=ier)
+        allocate(hval(0:nterms+10), stat=ier)
         if (ier.eq.1) then
         return
         endif
-        allocate(kval(0:nterms+5), stat=ier)
+        allocate(kval(0:nterms+10), stat=ier)
         if (ier.eq.1) then
         return
         endif
-        allocate(hder(0:nterms+5), stat=ier)
+        allocate(hder(0:nterms+10), stat=ier)
         if (ier.eq.1) then
         return
         endif
@@ -184,7 +184,7 @@ c
 
 c     convert Hankel H_n to modified Bessel K_n
 c     (up to scale of pi/2)
-        do n = 0,nterms,4
+        do n = 0,nterms+2,4
            kval(n) = -dimag(hval(n))
            kval(n+1) = -dreal(hval(n+1))
            kval(n+2) = dimag(hval(n+2))
@@ -391,12 +391,12 @@ c
         ijval = 0
         ijder = ijval + lwfjs+4
         imptemp = ijder + lwfjs+4
-        impolex = imptemp + nterms+5
-        impoley = impolex + nterms+3
-        impolexx = impoley + nterms+3
-        impolexy = impolexx + nterms+5
-        impoleyy = impolexy + nterms+5
-        itot = impoleyy + nterms+5
+        impolex = imptemp + nterms+8
+        impoley = impolex + nterms+8
+        impolexx = impoley + nterms+8
+        impolexy = impolexx + nterms+8
+        impoleyy = impolexy + nterms+8
+        itot = impoleyy + nterms+8
 
         lival1 = nterms+3
 c
@@ -520,11 +520,11 @@ c
         pi = 4.0d0*datan(1.0d0)
         pieye2=pi*ima/2.0d0
 c
-        allocate(hval(0:nterms+5), stat=ier)
+        allocate(hval(0:nterms+10), stat=ier)
         if (ier.eq.1) then
         return
         endif
-        allocate(kval(0:nterms+5), stat=ier)
+        allocate(kval(0:nterms+10), stat=ier)
         if (ier.eq.1) then
         return
         endif
@@ -620,7 +620,7 @@ c
 
 c     convert Hankel H_n to modified Bessel K_n
 c     (up to scale of pi/2)
-           do n = 0,nterms,4
+           do n = 0,nterms+2,4
               kval(n) = -dimag(hval(n))
               kval(n+1) = -dreal(hval(n+1))
               kval(n+2) = dimag(hval(n+2))
@@ -791,7 +791,7 @@ c
         if (ier.eq.1) then
           return
         endif
-        allocate(ival(0:nterms+3), stat=ier)
+        allocate(ival(0:nterms+10), stat=ier)
         if (ier.eq.1) then
           return
         endif
@@ -837,7 +837,7 @@ c
         endif
 c
 c
-        allocate(mptemp(0:nterms+2), stat=ier)
+        allocate(mptemp(0:nterms+10), stat=ier)
         if (ier.eq.1) then
           return
         endif
@@ -2729,13 +2729,13 @@ c     (up to scale of pi/2)
            rsj2 = rscale**2
 
            do i = 1,nterms
-              mpole(i) = mpole(i)+isign
-     1             *(dreal(hexp1)*dreal(htemp(i-1))
+              mpole(i) = mpole(i)+
+     1             (dreal(hexp1)*dreal(htemp(i-1))
      1             -dimag(hexp1)*dimag(htemp(i-1))
      2             +ima*(dreal(hexp1)*dimag(htemp(i-1))
      3             +dimag(hexp1)*dreal(htemp(i-1))))*rsj2
-              mpole(i) = mpole(i)+isign
-     1             *(dreal(hexp1)*dreal(htemp(i+1))
+              mpole(i) = mpole(i)+
+     1             (dreal(hexp1)*dreal(htemp(i+1))
      1             +dimag(hexp1)*dimag(htemp(i+1))
      2             +ima*(dreal(hexp1)*dimag(htemp(i+1))
      3             -dimag(hexp1)*dreal(htemp(i+1))))
@@ -3218,13 +3218,13 @@ c
       implicit real *8 (a-h,o-z)
       complex *16 mptemp(0:nterms+2)
       complex *16 jval(0:nterms+3)
-      real *8 ival(0:nterms+3)
+      real *8 ival(0:nterms+6)
       real *8 theta
       complex *16 ima,zfac,zfac2,zmull,zmullinv
       data ima/(0.0d0,1.0d0)/
 c
 c     convert Bessel J_n to modified Bessel I_n
-      do n = 0,nterms,4
+      do n = 0,nterms+2,4
          ival(n) = dreal(jval(n))
          ival(n+1) = dimag(jval(n+1))
          ival(n+2) = -dreal(jval(n+2))
@@ -3496,7 +3496,7 @@ c
 
 c     convert Hankel H_n to modified Bessel K_n
 c     (up to scale of pi/2)
-        do n = 0,nterms,4
+        do n = 0,nterms+2,4
            kval(n) = -dimag(hval(n))
            kval(n+1) = -dreal(hval(n+1))
            kval(n+2) = dimag(hval(n+2))
@@ -3697,7 +3697,7 @@ c
       if (ier.eq.1) then
          return
       endif
-      allocate(ival(0:nterms+3), stat=ier)
+      allocate(ival(0:nterms+10), stat=ier)
       if (ier.eq.1) then
          return
       endif
@@ -3732,7 +3732,7 @@ c     get j vals for this source
      1        lwfjs,iscale,ntop)
 
 c     convert Bessel J_n to modified Bessel I_n
-         do n = 0,nterms,4
+         do n = 0,nterms+2,4
             ival(n) = dreal(jval(n))
             ival(n+1) = dimag(jval(n+1))
             ival(n+2) = -dreal(jval(n+2))
@@ -3877,7 +3877,7 @@ c
       if (ier.eq.1) then
          return
       endif
-      allocate(ival(0:nterms+3), stat=ier)
+      allocate(ival(0:nterms+10), stat=ier)
       if (ier.eq.1) then
          return
       endif
@@ -3910,7 +3910,7 @@ c     get j vals for this source
      1        lwfjs,iscale,ntop)
 
 c     convert Bessel J_n to modified Bessel I_n
-         do n = 0,nterms,4
+         do n = 0,nterms+2,4
             ival(n) = dreal(jval(n))
             ival(n+1) = dimag(jval(n+1))
             ival(n+2) = -dreal(jval(n+2))
@@ -4047,7 +4047,7 @@ c
       if (ier.eq.1) then
          return
       endif
-      allocate(kval(0:nterms+5), stat=ier)
+      allocate(kval(0:nterms+10), stat=ier)
       if (ier.eq.1) then
          return
       endif
@@ -4078,7 +4078,7 @@ c     get h vals for this source
 
 c     convert Hankel H_n to modified Bessel K_n
 c     (up to scale of pi/2)
-         do n = 0,nterms,4
+         do n = 0,nterms+2,4
             kval(n) = -dimag(hval(n))
             kval(n+1) = -dreal(hval(n+1))
             kval(n+2) = dimag(hval(n+2))
@@ -4209,7 +4209,7 @@ c
       if (ier.eq.1) then
          return
       endif
-      allocate(kval(0:nterms+5), stat=ier)
+      allocate(kval(0:nterms+10), stat=ier)
       if (ier.eq.1) then
          return
       endif
@@ -4236,7 +4236,7 @@ c     get h vals for this source
 
 c     convert Hankel H_n to modified Bessel K_n
 c     (up to scale of pi/2)
-         do n = 0,nterms,4
+         do n = 0,nterms+2,4
             kval(n) = -dimag(hval(n))
             kval(n+1) = -dreal(hval(n+1))
             kval(n+2) = dimag(hval(n+2))
