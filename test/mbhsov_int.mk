@@ -1,4 +1,4 @@
-PROJECT=MBHSOV2   # for historical reasons we always like to 
+PROJECT=MBHSOV2INT   # for historical reasons we always like to 
                      # call the executable int2, but you could set it to 
                      # something more descriptive
 
@@ -37,7 +37,7 @@ OBJSUF=o
 MODSUF=mod
 FC=gfortran -c 
 FFLAGS=-g
-FLINK=gfortran -g -o $(PROJECT)
+FLINK=gfortran -o $(PROJECT)
 
 else
 
@@ -167,13 +167,13 @@ endif
 
 # SOURCE FILE LIST
 #
-vpath %.f .:../src:../fmmlib2d:../fftpack:../garbow
+vpath %.f .:../src
 
 vpath %.f90 .
 
 FMODS = 
 
-F90SRCS = mbhsov_dr.f90
+F90SRCS = mbhsov_int_dr.f90
 
 FSRCS = modbhrouts.f helmrouts2d_quad.f helmrouts2d.f \
 	laprouts2d.f laprouts2d_quad.f hank103.f prini.f \

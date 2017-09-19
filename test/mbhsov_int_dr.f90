@@ -9,17 +9,21 @@
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 
-  program mbhrouts_dr
+  program mbhsov_int_dr
 
     implicit real *8 (a-h,o-z)
     real *8, allocatable, dimension(:) :: wsave 
-    complex *16, allocatable, dimension(:) :: mbhmp,ymp
-    complex *16, allocatable, dimension(:) :: mbhmp3,ymp3
-    complex *16, allocatable, dimension(:) :: lmp2,ymp2
-    complex *16, allocatable, dimension(:) :: lmp4,ymp4
+    complex *16, allocatable, dimension(:) :: mbhloc,lloc
+    complex *16, allocatable, dimension(:) :: mbhloc3
+    complex *16, allocatable, dimension(:) :: iloc2,lloc2
+    complex *16, allocatable, dimension(:) :: lloc3,lloc4
     real *8, allocatable, dimension(:) :: utarg,utargex
-    real *8, allocatable, dimension(:) :: utarg2, utarg3, utarg4
+    complex *16, allocatable, dimension(:) :: iloc4
+    complex *16, allocatable, dimension(:) :: loclap
+    real *8, allocatable, dimension(:) :: utarg2, utargloc
+    real *8, allocatable, dimension(:) :: utarg3, utarg4
     real *8, allocatable, dimension(:) :: u, up
+    real *8, allocatable, dimension(:) :: diffs,ders,kvec,kder
     real *8, allocatable, dimension(:,:) :: gradtarg,gradtargex
     real *8, allocatable, dimension(:,:) :: hesstarg,hesstargex
     real *8, allocatable, dimension(:,:) :: gradtargloc,hesstargloc
@@ -42,8 +46,8 @@
     real *8 :: amattemp(2,2), utemp(2,2), vtemp(2,2), wtemp(2)
     real *8 :: ztarg(2),center(2),pot,grad(2),hess(3),lambda,zdiff(2), zarb(2)
 
-    complex *16, allocatable, dimension(:) :: zquadstr, &
-         potqp, potqplap
+    complex *16, allocatable, dimension(:) :: hvec,hder,zquadstr,mpoleqp, &
+         mpoleqplap, potqp, potqplap, ympoleqp, ylocqp
     real *8, allocatable :: potqp1(:), gradqp1(:,:), hessqp1(:,:), potqp2(:)
     complex *16 :: eye, z, ztemp1, ztemp2
 
@@ -66,15 +70,16 @@
 
     ! scale
 
-    ! target domain = [-scale,scale] x [-scale,scale] box
-    ! outside of circle of radius 0.5 scale
+    ! source domain = [-scale,scale] x [-scale,scale] box
+    ! outside of circle of radius frac* 0.5 * scale
 
-    ! sources located within circle of radius frac*0.5*scale
+    ! targets located within circle of radius 0.5*scale
 
     ! nterms needed for machine precision depends on frac
 
     scale = 1.0d0
-    frac = 0.5d0
+    frac = 2.0d0
+
     ns = 100
     nt = 100
 
@@ -92,22 +97,26 @@
          hessplot(3,ntplot),dmask(ntplot))
     allocate(znrmtarg(2,npts),znrmsrc(2,npts))
     allocate(zquadstr(ns),quadstr(ns),quadvec(3,ns),dir1(2,ns),dir2(2,ns))
-    allocate(dipstr(ns),dipvec(2,ns),charge(ns),zcharge(ns))
-    allocate(zdipstr(ns))
+    allocate(zdipstr(ns),zcharge(ns))
+    allocate(dipstr(ns),dipvec(2,ns),charge(ns))
     allocate(utargex(nt),gradtargex(2,nt),utarg(nt),gradtarg(2,nt))
     allocate(hesstarg(3,nt),hesstargex(3,nt))
     allocate(gradtargloc(2,nt),hesstargloc(3,nt))
-    allocate(mbhmp(0:npts),ymp(0:npts))
-    allocate(mbhmp3(0:npts),ymp3(0:npts))    
-    allocate(ymp2(0:npts),lmp2(0:npts))
-    allocate(ymp4(0:npts),lmp4(0:npts))
+    allocate(mbhloc(0:npts),lloc(0:npts),diffs(0:l),ders(0:l))
+    allocate(mbhloc3(0:npts))
+    allocate(lloc2(0:npts),iloc2(0:npts),iloc4(0:npts))
+    allocate(lloc3(0:npts),lloc4(0:npts))
+    allocate(loclap(0:npts))
+    allocate(kvec(0:l+5),kder(0:l+5),hvec(0:l+5),hder(0:l+5))
+    allocate(mpoleqp(-nterms:nterms),mpoleqplap(0:nterms))
+    allocate(ympoleqp(0:nterms),ylocqp(0:nterms))
     allocate(gradtarg2(2,nt),hesstarg2(3,nt))
     allocate(gradtarg3(2,nt),hesstarg3(3,nt))
     allocate(gradtarg4(2,nt),hesstarg4(3,nt))
     allocate(gradtargqp(2,nt),hesstargqp(3,nt))
-    allocate(utarg4(nt),utarg3(nt))
     allocate(gradtargqplap(2,nt),hesstargqplap(3,nt))
-    allocate(potqp(nt),potqplap(nt),utarg2(nt))
+    allocate(potqp(nt),potqplap(nt),utarg2(nt),utargloc(nt))
+    allocate(utarg3(nt),utarg4(nt))
     allocate(zcirc(2,npts))
     allocate(potqp1(nt),gradqp1(2,nt),hessqp1(3,nt),potqp2(nt))
     call prini(6,13)
@@ -119,7 +128,7 @@
     ! type of sources 
 
     ifcharge = 0
-    ifdipole = 1
+    ifdipole = 0
     ifquad = 1
     ifoct = 0
 
@@ -138,13 +147,11 @@
     ztarg(2) = 0.0d0
 
     do i = 1,nt
-       do ii = 1,100
-          target(1,i) = ztarg(1) - scale + 2*scale*hkrand(0)
-          target(2,i) = ztarg(2) - scale + 2*scale*hkrand(0)
-          if (target(1,i)**2 + target(2,i)**2 .ge. (0.5d0*scale)**2) then
-             exit
-          endif
-       enddo
+       th = 2.0d0*pi*hkrand(0)
+       rr = 0.5d0*scale*hkrand(0)
+       target(1,i) = ztarg(1) + dcos(th)*rr
+       target(2,i) = ztarg(2) + dsin(th)*rr
+       
     enddo
 
     do i = 1,nt
@@ -168,9 +175,9 @@
           targplot(2,ii) = yy
 
           if (xx**2 + yy**2 .le. (0.5d0*scale)**2) then
-             dmask(ii) = 1.0d200
-          else
              dmask(ii) = 1.0d0
+          else
+             dmask(ii) = 1.0d200
           endif
 
        enddo
@@ -190,10 +197,19 @@
 
     do i = 1,ns
        ! locations
-       th = 2.0d0*pi*hkrand(0)
-       rr = 0.5d0*frac*scale*hkrand(0)
-       source(1,i) = center(1) + dcos(th)*rr
-       source(2,i) = center(2) + dsin(th)*rr
+       do ii = 1,100
+          source(1,i) = center(1) - scale + 2*scale*hkrand(0)
+          source(2,i) = center(2) - scale + 2*scale*hkrand(0)
+          if (source(1,i)**2 + source(2,i)**2 .ge. (frac*0.5d0*scale)**2) then
+             exit
+          endif
+          if ( ii .eq. 100) then
+             write(*,*) 'SOMETHING WENT WRONG, NO SUITABLE CHARGE LOCATION'
+             write(*,*) 'ABORT'
+             stop
+          endif
+       enddo
+       
        ! charge
        charge(i) = -1.0d0+2.0d0*hkrand(0)
        zcharge(i) = charge(i)
@@ -209,9 +225,9 @@
        dipvec(1,i) = a
        dipvec(2,i) = b
 
-       dipstr(i) = hkrand(0)
+       dipstr(i) = 1.0d0+hkrand(0)
 
-       zdipstr(i) = dipstr(i)*(dipvec(1,i)+eye*dipvec(2,i))       
+       zdipstr(i) = dipstr(i)*(dipvec(1,i)+eye*dipvec(2,i))
 
        ! directions
        a = -0.5d0+hkrand(0)
@@ -233,7 +249,7 @@
        quadvec(2,i) = a*d + b*c
        quadvec(3,i) = b*d
        ! strengths
-       quadstr(i) = hkrand(0)
+       quadstr(i) = 1.0d0+hkrand(0)
        zquadstr(i) = quadstr(i)
     enddo
 
@@ -243,8 +259,8 @@
     enddo
 
     do i = 1,ns
-       write(23,*) source(1,i), source(2,i), dir1(1,i), &
-            dir1(2,i), dir2(1,i), dir2(2,i)
+       write(23,*) source(1,i), source(2,i), dipvec(1,i), &
+            dipvec(2,i), dir1(1,i), dir1(2,i), dir2(1,i), dir2(2,i)
     enddo
 
     lambda = 2.0d0**(-24)
@@ -300,7 +316,6 @@
           rscale = min(scale*0.5d0*lambda,1.0d0)
           rscalelap = min(scale*0.5d0,1.0d0)
 
-
           rad = 0.5d0*scale
 
           ! getting exact values
@@ -345,57 +360,65 @@
 
           call mbh2dsov_circvals(u,up,source,ifcharge,charge, &
                ifdipole,dipstr,dipvec,ifquad,quadstr,quadvec, &
-               ifoct,octstr,octvec,ns,center,rad,lambda,npts,zcirc)
+               ifoct,octstr,octvec,ns,ztarg,rad,lambda,npts,zcirc)
 
           do i = 1,npts
              write(30,*) u(i), up(i)
           enddo
           
-          call mbh2dsov_dtocmp(lambda,rad,rscale,u,up,npts,mbhmp, &
-               ymp,wsave,work)
+          call mbh2dsov_dtocta(lambda,rad,rscale,u,up,npts,mbhloc, &
+               lloc,wsave,work)
 
-          call mbh2dformmp_all(ier,lambda,rscale,source,ifcharge,charge, &
+          call mbh2dformta_all(ier,lambda,rscale,source,ifcharge,charge, &
                ifdipole,dipstr,dipvec,ifquad,quadstr,quadvec,ifoct,octstr, &
-               octvec,ns,center,nterms,mbhmp3,ymp3)
+               octvec,ns,ztarg,nterms,mbhloc3,lloc3)
 
-          call mbh2dsov_matsmp(lambda,rad,rscale,npts,amatsmbh,work)
-
-          call mbh2dsov_dtocmp_naive(lambda,rad,rscale,rscalelap,u,up,npts,lmp2, &
-               ymp2,wsave,work)
-
-          call mbh2dsov_matsmp_naive(lambda,rad,rscale,rscalelap, &
-               npts,amatsnaive,work)
-
-          do i = 0,nterms
-             ymp4(i) = 0.0d0
-             lmp4(i) = 0.0d0
-          enddo
-          
-          if (ifcharge .eq. 1) then
-             call y2dformmp_add(ier,lambda,rscale,source,charge,ns, &
-                  center,nterms,ymp4)
-             call l2dformmp_add(ier,rscalelap,source,zcharge,ns, &
-                  center,nterms,lmp4)
-          endif
-          if (ifdipole .eq. 1) then
-             call y2dformmp_dp_add(ier,lambda,rscale,source,dipstr,dipvec, &
-                  ns,center,nterms,ymp4)
-             call l2dformmp_dp_add(ier,rscalelap,source,zdipstr,ns, &
-                  center,nterms,lmp4)
-          endif
-          if (ifquad .eq. 1) then
-             call y2dformmp_qp_add(ier,lambda,rscale,source,zquadstr,quadvec, &
-                  ns,center,nterms,ymp4)
-             call l2dformmp_qp_add(ier,rscalelap,source,zquadstr,quadvec,ns, &
-                  center,nterms,lmp4)
-          endif
-
+          call mbh2dsov_matsta(lambda,rad,rscale,npts,amatsmbh,work)
 
 !          do i = 0,nterms-1
 !             write(*,*) i
-!             write(*,*) ymp4(i)/(lambda**2)/ymp2(i), lmp4(i)/(lambda**2)/lmp2(i)
+!             write(*,*) mbhloc(i)/mbhloc3(i), lloc(i)/lloc3(i)
+!             write(*,*) mbhloc(i),lloc(i)
+!             write(*,*) mbhloc3(i), lloc3(i)
 !          enddo
+
+!          do i = 0,nterms
+!             mbhloc(i) = mbhloc3(i)
+!             lloc(i) = lloc3(i)
+!          enddo
+
+!          stop
+
+          call mbh2dsov_dtocta_naive(lambda,rad,rscale,rscalelap, &
+               u,up,npts,iloc2,lloc2,wsave,work)
+
+          do i = 0,nterms
+             iloc4(i) = 0.0d0
+             lloc4(i) = 0.0d0
+          enddo
           
+          if (ifcharge .eq. 1) then
+             call y2dformta_add(ier,lambda,rscale,source,charge,ns, &
+                  ztarg,nterms,iloc4)
+             call l2dformta_add(ier,rscalelap,source,zcharge,ns, &
+                  ztarg,nterms,lloc4)
+          endif
+          if (ifdipole .eq. 1) then
+             call y2dformta_dp_add(ier,lambda,rscale,source,dipstr,dipvec, &
+                  ns,ztarg,nterms,iloc4)
+             call l2dformta_dp_add(ier,rscalelap,source,zdipstr,ns, &
+                  ztarg,nterms,lloc4)
+          endif
+          if (ifquad .eq. 1) then
+             call y2dformta_qp_add(ier,lambda,rscale,source,zquadstr,quadvec, &
+                  ns,ztarg,nterms,iloc4)
+             call l2dformta_qp_add(ier,rscalelap,source,zquadstr,quadvec,ns, &
+                  ztarg,nterms,lloc4)
+          endif
+
+          call mbh2dsov_matsta_naive(lambda,rad,rscale,rscalelap, &
+               npts,amatsnaive,work)
+
           ! obtain condition numbers of scaled matrices 
 
           do i = 0,l-1
@@ -436,15 +459,25 @@
 
           ! evaluate field at targets using new functions
 
-          call mbh2dmpevalall(lambda,rscale,center,mbhmp,ymp, &
+          do i = 1,nt
+             utarg(i) = 0.0d0
+             gradtarg(1:2,i) = (/ 0.0d0, 0.0d0 /)
+             hesstarg(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
+             utarg3(i) = 0.0d0
+             gradtarg3(1:2,i) = (/ 0.0d0, 0.0d0 /)
+             hesstarg3(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
+          enddo
+          
+          call mbh2dtaevalall(lambda,rscale,center,mbhloc,lloc, &
                nterms,target,nt,ifpot,utarg,ifgrad,gradtarg, &
                ifhess,hesstarg)
 
-          call mbh2dmpevalall(lambda,rscale,center,mbhmp3,ymp3, &
+          call mbh2dtaevalall(lambda,rscale,center,mbhloc3,lloc3, &
                nterms,target,nt,ifpot,utarg3,ifgrad,gradtarg3, &
                ifhess,hesstarg3)
 
           ! evaluate field at targets using the difference of naive functions
+          ! separation of variables on disc used to get multipole coefficients
 
           ifpot = 1
           ifgrad = 1
@@ -456,7 +489,7 @@
              hessqp1(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
           enddo
 
-          call y2dmpevalall(lambda,rscale,center,ymp2,nterms,target,nt, &
+          call y2dtaevalall(lambda,rscale,center,iloc2,nterms,target,nt, &
                ifpot,potqp1,ifgrad,gradqp1,ifhess,hessqp1)
 
           do i = 1,nt
@@ -471,7 +504,7 @@
              hesstargqplap(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
           enddo
 
-          call l2dmpevalall(rscalelap,center,lmp2,nterms,target,nt, &
+          call l2dtaevalall(rscalelap,center,lloc2,nterms,target,nt, &
                ifpot,potqplap,ifgrad,gradtargqplap,ifhess,hesstargqplap)
 
           do i = 1,nt
@@ -501,7 +534,7 @@
              hessqp1(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
           enddo
 
-          call y2dmpevalall(lambda,rscale,center,ymp4,nterms,target,nt, &
+          call y2dtaevalall(lambda,rscale,center,iloc4,nterms,target,nt, &
                ifpot,potqp1,ifgrad,gradqp1,ifhess,hessqp1)
 
           do i = 1,nt
@@ -516,7 +549,7 @@
              hesstargqplap(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
           enddo
 
-          call l2dmpevalall(rscalelap,center,lmp4,nterms,target,nt, &
+          call l2dtaevalall(rscalelap,center,lloc4,nterms,target,nt, &
                ifpot,potqplap,ifgrad,gradtargqplap,ifhess,hesstargqplap)
 
           do i = 1,nt
@@ -533,69 +566,62 @@
                   -hesstargqplap(3,i)/(2.0d0*pi))/(lambda**2)
           enddo
 
-          ifprint = 1
+          ifrel = .true.
+
+          write(*,*) 'LAMBDA    '
+          write(*,*) lambda
+          write(*,*) 'SIZE OF SOURCE BOX '
+          write(*,*) scale
+          write(*,*) 'ERROR FOR POTENTIAL WITH:' 
+          write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
+          write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
+          write(*,*) '(3) EXACT COEFFS NEW '
+          write(*,*) '(4) EXACT COEFFS DIFF '
+
+          err_newmp = rmsfun1(utarg,utargex,nt,ifrel)
+          err_oldmp = rmsfun1(utarg2,utargex,nt,ifrel)
+          err3 = rmsfun1(utarg3,utargex,nt,ifrel)
+          err4 = rmsfun1(utarg4,utargex,nt,ifrel)
+          write(*,*) err_newmp, err_oldmp, err3, err4
+
+          write(25,*) lambda, err_newmp, err_oldmp, err3, err4
+
+          write(*,*) 'ERROR FOR GRAD WITH:' 
+          write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
+          write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
+          write(*,*) '(3) EXACT COEFFS NEW '
+          write(*,*) '(4) EXACT COEFFS DIFF '
+
+          err_newmp = rmsfun1(gradtarg,gradtargex,2*nt,ifrel)
+          err_oldmp = rmsfun1(gradtarg2,gradtargex,2*nt,ifrel)
+          err3 = rmsfun1(gradtarg3,gradtargex,2*nt,ifrel)
+          err4 = rmsfun1(gradtarg4,gradtargex,2*nt,ifrel)
+          write(*,*) err_newmp, err_oldmp, err3, err4
+
+          write(26,*) lambda, err_newmp, err_oldmp, err3, err4
+
+          write(*,*) 'ERROR FOR HESS WITH:' 
+          write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
+          write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
+          write(*,*) '(3) EXACT COEFFS NEW '
+          write(*,*) '(4) EXACT COEFFS DIFF '
+
+          err_newmp = rmsfun1(hesstarg,hesstargex,3*nt,ifrel)
+          err_oldmp = rmsfun1(hesstarg2,hesstargex,3*nt,ifrel)
+          err3 = rmsfun1(hesstarg3,hesstargex,3*nt,ifrel)
+          err4 = rmsfun1(hesstarg4,hesstargex,3*nt,ifrel)
+          write(*,*) err_newmp, err_oldmp, err3, err4
+
+          write(27,*) lambda, err_newmp, err_oldmp, err3, err4
+
           
-          if (ifprint .eq. 1) then
-             
-             ifrel = .true.
-
-             write(*,*) 'LAMBDA    '
-             write(*,*) lambda
-             write(*,*) 'SIZE OF SOURCE BOX '
-             write(*,*) scale
-             write(*,*) 'ERROR FOR POTENTIAL WITH:' 
-             write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
-             write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
-             write(*,*) '(3) EXACT COEFFS NEW '
-             write(*,*) '(4) EXACT COEFFS DIFF '
-
-             err_newmp = rmsfun1(utarg,utargex,nt,ifrel)
-             err_oldmp = rmsfun1(utarg2,utargex,nt,ifrel)
-             err3 = rmsfun1(utarg3,utargex,nt,ifrel)
-             err4 = rmsfun1(utarg4,utargex,nt,ifrel)
-             write(*,*) err_newmp, err_oldmp, err3, err4
-
-             write(25,*) lambda, err_newmp, err_oldmp, err3, err4
-
-             write(*,*) 'ERROR FOR GRAD WITH:' 
-             write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
-             write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
-             write(*,*) '(3) EXACT COEFFS NEW '
-             write(*,*) '(4) EXACT COEFFS DIFF '
-
-             nt2 = 2*nt
-             err_newmp = rmsfun1(gradtarg,gradtargex,nt2,ifrel)
-             err_oldmp = rmsfun1(gradtarg2,gradtargex,nt2,ifrel)
-             err3 = rmsfun1(gradtarg3,gradtargex,nt2,ifrel)
-             err4 = rmsfun1(gradtarg4,gradtargex,nt2,ifrel)
-             write(*,*) err_newmp, err_oldmp, err3, err4
-
-             write(26,*) lambda, err_newmp, err_oldmp, err3, err4
-
-             write(*,*) 'ERROR FOR HESS WITH:' 
-             write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
-             write(*,*) '(2) DIFFERENCE OF YUKAWA AND LAPLACE '
-             write(*,*) '(3) EXACT COEFFS NEW '
-             write(*,*) '(4) EXACT COEFFS DIFF '
-
-             nt3 = 3*nt
-             err_newmp = rmsfun1(hesstarg,hesstargex,nt3,ifrel)
-             err_oldmp = rmsfun1(hesstarg2,hesstargex,nt3,ifrel)
-             err3 = rmsfun1(hesstarg3,hesstargex,nt3,ifrel)
-             err4 = rmsfun1(hesstarg4,hesstargex,nt3,ifrel)
-             write(*,*) err_newmp, err_oldmp, err3, err4
-
-             write(27,*) lambda, err_newmp, err_oldmp, err3, err4
-
-          endif
-
        enddo
 
     enddo
 
 
     stop
-  end program mbhrouts_dr
+  end program mbhsov_int_dr
 
 
   real *8 function rmsfun1(u,uexact,n,ifrel)
