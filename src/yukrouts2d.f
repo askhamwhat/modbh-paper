@@ -967,12 +967,8 @@ c
            call y2cart2polar(zdiff,r,theta)
            z=zk*r
            ifder=0
-           write(*,*) 'z = ', z
-           write(*,*) 'rscale = ', rscale
            call jfuns2d(ier,nterms+1,z,rscale,jval,ifder,jder,
      1           lwfjs,iscale,ntop)
-
-           write(*,*) 'ier = ', ier
 
 c     convert Bessel J_n to modified Bessel I_n
            do n = 0,nterms,4

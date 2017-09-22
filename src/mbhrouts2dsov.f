@@ -761,8 +761,6 @@ c     for radius of circle
       call jfuns2d(ier,l+1,z,rscale,fjs,ifder,fjder,
      1           lwfjs,iscale,ntop)
 
-      write(*,*) 'ier = ', ier
-      
 c     convert Bessel J_n to modified Bessel I_n
       do n = 0,l,4
          ival(n) = dreal(fjs(n))*0.25d0

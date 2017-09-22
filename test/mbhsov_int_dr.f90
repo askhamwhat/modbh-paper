@@ -83,8 +83,20 @@
     ns = 100
     nt = 100
 
-    ngrid = 30
+    ngrid = 300
     ntplot = ngrid*ngrid
+
+    ! open files for writing
+
+    open(FILE='int_targ.txt',UNIT=22,STATUS='REPLACE')
+    open(FILE='int_src.txt',UNIT=23,STATUS='REPLACE')
+    open(FILE='int_example.txt',UNIT=24,STATUS='REPLACE')
+    open(FILE='int_funs.txt',UNIT=30,STATUS='REPLACE')        
+    open(FILE='int_conds.txt',UNIT=28,STATUS='REPLACE')            
+    open(FILE='int_pot.txt',UNIT=25,STATUS='REPLACE')
+    open(FILE='int_grad.txt',UNIT=26,STATUS='REPLACE')
+    open(FILE='int_hess.txt',UNIT=27,STATUS='REPLACE')    
+    
 
     ! allocate storage
 
@@ -159,7 +171,7 @@
     enddo
 
     do i = 1,nt
-       write(22,*) target(1,i), target(2,i)
+       write(22,*) target(1,i),   target(2,i)
     enddo
 
     ! points for plotting function
@@ -259,8 +271,9 @@
     enddo
 
     do i = 1,ns
-       write(23,*) source(1,i), source(2,i), dipvec(1,i), &
-            dipvec(2,i), dir1(1,i), dir1(2,i), dir2(1,i), dir2(2,i)
+       write(23,*) source(1,i),   source(2,i),   dipvec(1,i), &
+              dipvec(2,i),   dir1(1,i),   dir1(2,i),   &
+            dir2(1,i),   dir2(2,i)
     enddo
 
     lambda = 2.0d0**(-24)
@@ -301,17 +314,18 @@
 
 
     do i = 1,ntplot
-       write(24,*) potplot(i), gradplot(1,i), gradplot(2,i), &
-            hessplot(1,i), hessplot(2,i), hessplot(3,i), &
-            dmask(i)
+       write(24,*) potplot(i),   gradplot(1,i),   gradplot(2,i), &
+              hessplot(1,i),   hessplot(2,i),   hessplot(3,i), &
+              dmask(i),   lambda,  targplot(1,i)-zarb(1), &
+             targplot(2,i)-zarb(2)
     enddo
 
 
-    do iiii = 1,24
+    do iiii = -24,8
   
-       do jjjj = 1,1
+       do jjjj = 1,10
 
-          lambda = 2.0d0**(-iiii) + hkrand(0)*2.0d0**(-iiii)
+          lambda = 2.0d0**(iiii) + hkrand(0)*2.0d0**(iiii)
 
           rscale = min(scale*0.5d0*lambda,1.0d0)
           rscalelap = min(scale*0.5d0,1.0d0)
@@ -363,7 +377,7 @@
                ifoct,octstr,octvec,ns,ztarg,rad,lambda,npts,zcirc)
 
           do i = 1,npts
-             write(30,*) u(i), up(i)
+             write(30,*) u(i),   up(i)
           enddo
           
           call mbh2dsov_dtocta(lambda,rad,rscale,u,up,npts,mbhloc, &
@@ -454,7 +468,7 @@
           enddo
 
           do i = 0,l-1
-             write(28,*) l, lambda, condsmbh(i), condsnaive(i)
+             write(28,*) l,   lambda,   condsmbh(i),   condsnaive(i), scale
           enddo
 
           ! evaluate field at targets using new functions
@@ -584,7 +598,8 @@
           err4 = rmsfun1(utarg4,utargex,nt,ifrel)
           write(*,*) err_newmp, err_oldmp, err3, err4
 
-          write(25,*) lambda, err_newmp, err_oldmp, err3, err4
+          write(25,*) lambda,   err_newmp,   err_oldmp, &
+                 err3,   err4, scale
 
           write(*,*) 'ERROR FOR GRAD WITH:' 
           write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
@@ -598,7 +613,8 @@
           err4 = rmsfun1(gradtarg4,gradtargex,2*nt,ifrel)
           write(*,*) err_newmp, err_oldmp, err3, err4
 
-          write(26,*) lambda, err_newmp, err_oldmp, err3, err4
+          write(26,*) lambda,   err_newmp,   err_oldmp, &
+                 err3,   err4, scale
 
           write(*,*) 'ERROR FOR HESS WITH:' 
           write(*,*) '(1) NEW OUTGOING BASIS FUNCTIONS '
@@ -612,7 +628,8 @@
           err4 = rmsfun1(hesstarg4,hesstargex,3*nt,ifrel)
           write(*,*) err_newmp, err_oldmp, err3, err4
 
-          write(27,*) lambda, err_newmp, err_oldmp, err3, err4
+          write(27,*) lambda,   err_newmp,   err_oldmp, &
+                 err3,   err4, scale
 
           
        enddo
@@ -665,9 +682,11 @@
           dtemp = dtemp + amat(i,j)**2
        enddo
        dtemp = dsqrt(dtemp)
-       do i = 1,m
-          amat(i,j) = amat(i,j)/dtemp
-       enddo
+       if (abs(dtemp).gt. 0.0d0) then
+          do i = 1,m
+             amat(i,j) = amat(i,j)/dtemp
+          enddo
+       end if
     enddo
 
   end subroutine dnormcols

@@ -1,0 +1,80 @@
+SHELL = /bin/sh
+
+LDFLAGS = -shared
+
+SRC_DIR = src
+BIN_DIR = bin
+TEST_DIR = test
+TMP_DIR = temp
+
+VPATH = $(SRC_DIR):$(BIN_DIR)
+
+#LIBBASE = mbhfmm2d
+#LIBNAME  = lib$(LIBBASE).so
+#LIBLINK = -l$(LIBBASE)
+FSOURCES = $(shell echo $(SRC_DIR)/*.f)
+OBJS = $(patsubst $(SRC_DIR)/%.f,%.o,$(FSOURCES))
+MODS = 
+
+DBG=
+OPENMP=
+
+ifeq ($(HOST),macosx)
+
+DBG = $(if $(patsubst yes,,$(DBGYN)),,-g)
+OPENMP = $(if $(patsubst yes,,$(OPENMPYN)),,-fopenmp)
+
+LDFLAGS = -shared
+OBJSUF=o
+MODSUF=mod
+FC=gfortran
+FFLAGS=$(DBG) -O2 $(OPENMP) -fPIC
+
+else
+
+ifeq ($(HOST),linux-gfortran)
+
+DBG = $(if $(patsubst yes,,$(DBGYN)),,-g)
+OPENMP = $(if $(patsubst yes,,$(OPENMPYN)),,-fopenmp)
+
+# buggy compiler, do not use -O2
+LDFLAGS = -shared
+OBJSUF=o
+MODSUF=mod
+FC=gfortran
+FFLAGS=$(DBG) -O3 $(OPENMP) -fPIC
+
+endif
+endif
+
+.PHONY : all lib profile release \
+  install install-strip uninstall clean distclean setup_dir
+
+all: lib tests figures
+
+setup_dir: 
+	@mkdir -p $(BIN_DIR)
+	@mkdir -p $(TMP_DIR)
+
+.f.$(OBJSUF): setup_dir
+	$(FC) $(FFLAGS) -c $< -o $(BIN_DIR)/$@
+
+.f90.$(OBJSUF): setup_dir
+	$(FC) $(FFLAGS) -c $< -o $(BIN_DIR)/$@
+
+
+
+lib: setup_dir $(MODS) $(OBJS) 
+
+clean:
+	cd $(BIN_DIR); rm -f *
+	cd $(TMP_DIR); rm -f *
+
+tests: mbhsov_int mbhsov_ext mbhsov_int_rtoz mbhsov_ext_rtoz
+
+mbhsov_int mbhsov_ext mbhsov_int_rtoz mbhsov_ext_rtoz: lib
+	cd $(BIN_DIR); $(FC) $(FFLAGS) -o ../$(TMP_DIR)/$@ ../$(TEST_DIR)/$@_dr.f90 $(OBJS)
+	cd $(TMP_DIR); ./$@
+
+printflags: 
+	@echo $(DBG) $(OPENMP)

@@ -9,7 +9,7 @@
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 
-  program mbhrouts_dr
+  program mbhsov_ext_rtoz_dr
 
     implicit real *8 (a-h,o-z)
     real *8, allocatable, dimension(:) :: wsave 
@@ -37,10 +37,11 @@
     real *8, allocatable, dimension(:) :: quadstr, dipstr, charge
     complex *16, allocatable, dimension(:) :: zdipstr, zcharge
     real *8, allocatable, dimension(:,:) :: target, source, targplot
+    real *8, allocatable, dimension(:,:) :: targetraw, sourceraw    
     real *8, allocatable, dimension(:,:,:) :: amatsmbh, amatsnaive
     real *8, allocatable, dimension(:) :: condsmbh, condsnaive
     real *8 :: amattemp(2,2), utemp(2,2), vtemp(2,2), wtemp(2)
-    real *8 :: ztarg(2),center(2),pot,grad(2),hess(3),lambda,zdiff(2), zarb(2)
+    real *8 :: ztarg(2),center(2),pot,grad(2),hess(3),lambda,zdiff(2)
 
     complex *16, allocatable, dimension(:) :: zquadstr, &
          potqp, potqplap
@@ -83,14 +84,14 @@
 
     ! open files for writing
 
-    open(FILE='ext_targ.txt',UNIT=22,STATUS='REPLACE')
-    open(FILE='ext_src.txt',UNIT=23,STATUS='REPLACE')
-    open(FILE='ext_example.txt',UNIT=24,STATUS='REPLACE')
-    open(FILE='ext_funs.txt',UNIT=30,STATUS='REPLACE')        
-    open(FILE='ext_conds.txt',UNIT=28,STATUS='REPLACE')            
-    open(FILE='ext_pot.txt',UNIT=25,STATUS='REPLACE')
-    open(FILE='ext_grad.txt',UNIT=26,STATUS='REPLACE')
-    open(FILE='ext_hess.txt',UNIT=27,STATUS='REPLACE')    
+    open(FILE='extrtoz_targ.txt',UNIT=22,STATUS='REPLACE')
+    open(FILE='extrtoz_src.txt',UNIT=23,STATUS='REPLACE')
+    open(FILE='extrtoz_example.txt',UNIT=24,STATUS='REPLACE')
+    open(FILE='extrtoz_funs.txt',UNIT=30,STATUS='REPLACE')        
+    open(FILE='extrtoz_conds.txt',UNIT=28,STATUS='REPLACE')            
+    open(FILE='extrtoz_pot.txt',UNIT=25,STATUS='REPLACE')
+    open(FILE='extrtoz_grad.txt',UNIT=26,STATUS='REPLACE')
+    open(FILE='extrtoz_hess.txt',UNIT=27,STATUS='REPLACE')    
     
     ! allocate storage
 
@@ -99,6 +100,7 @@
     allocate(u(npts),up(npts))
     allocate(wsave(nwsave))
     allocate(target(2,nt),source(2,ns),zptssrc(2,npts),zptstarg(2,npts))
+    allocate(targetraw(2,nt),sourceraw(2,ns))    
     allocate(targplot(2,ntplot),potplot(ntplot),gradplot(2,ntplot), &
          hessplot(3,ntplot),dmask(ntplot))
     allocate(znrmtarg(2,npts),znrmsrc(2,npts))
@@ -134,14 +136,6 @@
     ifquad = 1
     ifoct = 0
 
-    ! arbitrary offset, trying to avoid possible subnormal 
-    ! shenanigans
-    
-    zarb(1) = hkrand(0)
-    zarb(2) = hkrand(0)
-
-    zarb = (/ 0.0d0, 0.0d0 /)
-
     ! set up some targets in the box [-scale,scale]^2 
     ! minus the circle of radius 0.5*scale
 
@@ -150,48 +144,17 @@
 
     do i = 1,nt
        do ii = 1,100
-          target(1,i) = ztarg(1) - scale + 2*scale*hkrand(0)
-          target(2,i) = ztarg(2) - scale + 2*scale*hkrand(0)
-          if (target(1,i)**2 + target(2,i)**2 .ge. (0.5d0*scale)**2) then
+          targetraw(1,i) = ztarg(1) - scale + 2*scale*hkrand(0)
+          targetraw(2,i) = ztarg(2) - scale + 2*scale*hkrand(0)
+          if (targetraw(1,i)**2 + targetraw(2,i)**2 .ge. (0.5d0*scale)**2) then
              exit
           endif
        enddo
     enddo
 
     do i = 1,nt
-       target(1:2,i) = target(1:2,i) + zarb
+       write(22,*) targetraw(1,i),   targetraw(2,i)
     enddo
-
-    do i = 1,nt
-       write(22,*) target(1,i),   target(2,i)
-    enddo
-
-    ! points for plotting function
-
-    h = 2.0d0*scale/ngrid
-
-    do i = 1,ngrid
-       do j = 1,ngrid
-          ii = (i-1)*ngrid + j
-          xx = ztarg(1) -scale - 0.5d0*h + i*h
-          yy = ztarg(2) -scale - 0.5d0*h + j*h
-          targplot(1,ii) = xx
-          targplot(2,ii) = yy
-
-          if (xx**2 + yy**2 .le. (0.5d0*scale)**2) then
-             dmask(ii) = 1.0d200
-          else
-             dmask(ii) = 1.0d0
-          endif
-
-       enddo
-    enddo
-
-    do i = 1,ntplot
-       targplot(1:2,i) = targplot(1:2,i) + zarb
-    enddo
-
-    ztarg = ztarg+zarb
 
     ! set up some quadrupole sources in the disc
     ! of radius 0.5d0*frac*scale
@@ -203,8 +166,8 @@
        ! locations
        th = 2.0d0*pi*hkrand(0)
        rr = 0.5d0*frac*scale*hkrand(0)
-       source(1,i) = center(1) + dcos(th)*rr
-       source(2,i) = center(2) + dsin(th)*rr
+       sourceraw(1,i) = center(1) + dcos(th)*rr
+       sourceraw(2,i) = center(2) + dsin(th)*rr
        ! charge
        charge(i) = -1.0d0+2.0d0*hkrand(0)
        zcharge(i) = charge(i)
@@ -248,67 +211,31 @@
        zquadstr(i) = quadstr(i)
     enddo
 
-    center = center + zarb
     do i = 1,ns
-       source(1:2,i) = source(1:2,i) + zarb
-    enddo
-
-    do i = 1,ns
-       write(23,*) source(1,i),   source(2,i),   dipvec(1,i), &
+       write(23,*) sourceraw(1,i),   sourceraw(2,i),   dipvec(1,i), &
               dipvec(2,i),   dir1(1,i), &
               dir1(2,i),   dir2(1,i),   dir2(2,i)
     enddo
 
-    lambda = 2.0d0**(-24)
-
     ifpot = 1
     ifgrad = 1
     ifhess = 1
+
+    lambda = 1.0d0
     
-    do i = 1,ntplot
-       potplot(i) = 0.0d0
-       gradplot(1:2,i) = (/ 0.0d0, 0.0d0 /)
-       hessplot(1:3,i) = (/ 0.0d0, 0.0d0, 0.0d0 /)
-       do j = 1,ns
-          if (ifcharge .eq. 1) then 
-             call modbhgreen(lambda,targplot(1,i),source(1,j), &
-                  ifpot,pot,ifgrad,grad,ifhess,hess)
-             potplot(i) = potplot(i) + charge(j)*pot
-             gradplot(1:2,i) = gradplot(1:2,i) + charge(j)*grad
-             hessplot(1:3,i) = hessplot(1:3,i) + charge(j)*hess
-          endif
-          if (ifdipole .eq. 1) then 
-             call modbhgreend1(lambda,targplot(1,i),source(1,j), &
-                  ifpot,pot,ifgrad,grad,ifhess,hess,dipvec(1,j))
-             potplot(i) = potplot(i) + dipstr(j)*pot
-             gradplot(1:2,i) = gradplot(1:2,i) + dipstr(j)*grad
-             hessplot(1:3,i) = hessplot(1:3,i) + dipstr(j)*hess
-          endif
-          if (ifquad .eq. 1) then
-             call modbhgreend2(lambda,targplot(1,i),source(1,j), &
-                  ifpot,pot,ifgrad,grad,ifhess,hess,dir1(1,j), &
-                  dir2(1,j))
-             potplot(i) = potplot(i) + quadstr(j)*pot
-             gradplot(1:2,i) = gradplot(1:2,i) + quadstr(j)*grad
-             hessplot(1:3,i) = hessplot(1:3,i) + quadstr(j)*hess
-          endif
-       enddo
-    enddo
-
-
-    do i = 1,ntplot
-       write(24,*) potplot(i),   gradplot(1,i),   gradplot(2,i), &
-              hessplot(1,i),   hessplot(2,i),   hessplot(3,i), &
-              dmask(i),   lambda,  targplot(1,i)-zarb(1), &
-             targplot(2,i)-zarb(2)
-    enddo
-
-
     do iiii = -24,8
   
        do jjjj = 1,10
 
-          lambda = 2.0d0**(iiii) + hkrand(0)*2.0d0**(iiii)
+          scale = 2.0d0**(iiii) + hkrand(0)*2.0d0**(iiii)
+
+          do j = 1,ns
+             source(1:2,j) = sourceraw(1:2,j)*scale
+          enddo
+
+          do j = 1,nt
+             target(1:2,j) = targetraw(1:2,j)*scale
+          enddo
 
           rscale = min(scale*0.5d0*lambda,1.0d0)
           rscalelap = min(scale*0.5d0,1.0d0)
@@ -618,7 +545,7 @@
 
 
     stop
-  end program mbhrouts_dr
+  end program mbhsov_ext_rtoz_dr
 
 
   real *8 function rmsfun1(u,uexact,n,ifrel)
