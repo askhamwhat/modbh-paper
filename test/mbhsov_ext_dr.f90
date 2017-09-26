@@ -36,13 +36,15 @@
     real *8, allocatable, dimension(:,:) :: quadvec, dir1, dir2, dipvec
     real *8, allocatable, dimension(:) :: quadstr, dipstr, charge
     complex *16, allocatable, dimension(:) :: zdipstr, zcharge
+    real *8, allocatable, dimension(:) :: quadstrraw, dipstrraw, chargeraw
+    complex *16, allocatable, dimension(:) :: zdipstrraw, zchargeraw
     real *8, allocatable, dimension(:,:) :: target, source, targplot
     real *8, allocatable, dimension(:,:,:) :: amatsmbh, amatsnaive
     real *8, allocatable, dimension(:) :: condsmbh, condsnaive
     real *8 :: amattemp(2,2), utemp(2,2), vtemp(2,2), wtemp(2)
     real *8 :: ztarg(2),center(2),pot,grad(2),hess(3),lambda,zdiff(2), zarb(2)
 
-    complex *16, allocatable, dimension(:) :: zquadstr, &
+    complex *16, allocatable, dimension(:) :: zquadstr, zquadstrraw, &
          potqp, potqplap
     real *8, allocatable :: potqp1(:), gradqp1(:,:), hessqp1(:,:), potqp2(:)
     complex *16 :: eye, z, ztemp1, ztemp2
@@ -103,8 +105,10 @@
          hessplot(3,ntplot),dmask(ntplot))
     allocate(znrmtarg(2,npts),znrmsrc(2,npts))
     allocate(zquadstr(ns),quadstr(ns),quadvec(3,ns),dir1(2,ns),dir2(2,ns))
+    allocate(zquadstrraw(ns),quadstrraw(ns))
     allocate(dipstr(ns),dipvec(2,ns),charge(ns),zcharge(ns))
-    allocate(zdipstr(ns))
+    allocate(dipstrraw(ns),chargeraw(ns),zchargeraw(ns))
+    allocate(zdipstr(ns),zdipstrraw(ns))
     allocate(utargex(nt),gradtargex(2,nt),utarg(nt),gradtarg(2,nt))
     allocate(hesstarg(3,nt),hesstargex(3,nt))
     allocate(gradtargloc(2,nt),hesstargloc(3,nt))
@@ -129,8 +133,8 @@
 
     ! type of sources 
 
-    ifcharge = 0
-    ifdipole = 0
+    ifcharge = 1
+    ifdipole = 1
     ifquad = 1
     ifoct = 0
 
@@ -206,8 +210,8 @@
        source(1,i) = center(1) + dcos(th)*rr
        source(2,i) = center(2) + dsin(th)*rr
        ! charge
-       charge(i) = -1.0d0+2.0d0*hkrand(0)
-       zcharge(i) = charge(i)
+       chargeraw(i) = -1.0d0+2.0d0*hkrand(0)
+       zchargeraw(i) = chargeraw(i)
        
        ! dipole
        ! direction
@@ -220,9 +224,9 @@
        dipvec(1,i) = a
        dipvec(2,i) = b
 
-       dipstr(i) = hkrand(0)
+       dipstrraw(i) = hkrand(0)
 
-       zdipstr(i) = dipstr(i)*(dipvec(1,i)+eye*dipvec(2,i))       
+       zdipstrraw(i) = dipstrraw(i)*(dipvec(1,i)+eye*dipvec(2,i))       
 
        ! directions
        a = -0.5d0+hkrand(0)
@@ -244,8 +248,8 @@
        quadvec(2,i) = a*d + b*c
        quadvec(3,i) = b*d
        ! strengths
-       quadstr(i) = hkrand(0)
-       zquadstr(i) = quadstr(i)
+       quadstrraw(i) = hkrand(0)
+       zquadstrraw(i) = quadstrraw(i)
     enddo
 
     center = center + zarb
@@ -264,6 +268,15 @@
     ifpot = 1
     ifgrad = 1
     ifhess = 1
+
+    do j = 1,ns
+       charge(j) = chargeraw(j)*lambda**2
+       zcharge(j) = zchargeraw(j)*lambda**2       
+       dipstr(j) = dipstrraw(j)*lambda
+       zdipstr(j) = zdipstrraw(j)*lambda
+       quadstr(j) = quadstrraw(j)
+       zquadstr(j) = zquadstrraw(j)
+    enddo
     
     do i = 1,ntplot
        potplot(i) = 0.0d0
@@ -315,6 +328,16 @@
 
 
           rad = 0.5d0*scale
+          
+          do j = 1,ns
+             charge(j) = chargeraw(j)*lambda**2
+             zcharge(j) = zchargeraw(j)*lambda**2       
+             dipstr(j) = dipstrraw(j)*lambda
+             zdipstr(j) = zdipstrraw(j)*lambda
+             quadstr(j) = quadstrraw(j)
+             zquadstr(j) = zquadstrraw(j)
+          enddo
+          
 
           ! getting exact values
 
@@ -376,6 +399,8 @@
           call mbh2dsov_dtocmp_naive(lambda,rad,rscale,rscalelap,u,up,npts,lmp2, &
                ymp2,wsave,work)
 
+          lmp2(0) = -lmp2(0)
+
           call mbh2dsov_matsmp_naive(lambda,rad,rscale,rscalelap, &
                npts,amatsnaive,work)
 
@@ -389,6 +414,9 @@
                   center,nterms,ymp4)
              call l2dformmp_add(ier,rscalelap,source,zcharge,ns, &
                   center,nterms,lmp4)
+             do i = 0,nterms
+                lmp4(i) = -lmp4(i)
+             enddo
           endif
           if (ifdipole .eq. 1) then
              call y2dformmp_dp_add(ier,lambda,rscale,source,dipstr,dipvec, &

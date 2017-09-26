@@ -55,24 +55,24 @@ plt.rc('font', family='serif')
 
 # plot labels
 
-newfunstrext = r'$\left (K_n, Q_n \right)$'
-oldfunstrext = r'$\left (K_n, r^{-n} \right)$'
-newfunstrint = r'$\left (r^n, R_n \right)$'
+newfunstrext = r'$\left (Q_n, K_n \right)$'
+oldfunstrext = r'$\left (r^{-n}, K_n \right)$'
+newfunstrint = r'$\left (r^n, P_n \right)$'
 oldfunstrint = r'$\left (r^n, I_n \right)$'
 
-newfunstrexta = r'$\left (K_n, Q_n \right), \alpha \to 0$'
-oldfunstrexta = r'$\left (K_n, r^{-n} \right), \alpha \to 0$'
-newfunstrinta = r'$\left (r^n, R_n \right), \alpha \to 0$'
-oldfunstrinta = r'$\left (r^n, I_n \right), \alpha \to 0$'
+newfunstrexta = r'$\left (Q_n, K_n \right), \lambda \to 0$'
+oldfunstrexta = r'$\left (r^{-n}, K_n \right), \lambda \to 0$'
+newfunstrinta = r'$\left (r^n, P_n \right), \lambda \to 0$'
+oldfunstrinta = r'$\left (r^n, I_n \right), \lambda \to 0$'
 
-newfunstrextr = r'$\left (K_n, Q_n \right), r \to 0$'
-oldfunstrextr = r'$\left (K_n, r^{-n} \right), r \to 0$'
-newfunstrintr = r'$\left (r^n, R_n \right), r \to 0$'
+newfunstrextr = r'$\left (Q_n, K_n \right), r \to 0$'
+oldfunstrextr = r'$\left (r^{-n}, K_n \right), r \to 0$'
+newfunstrintr = r'$\left (r^n, P_n \right), r \to 0$'
 oldfunstrintr = r'$\left (r^n, I_n \right), r \to 0$'
 
 # axis labels
 
-alpharstr = r'$\alpha r$'
+lambdarstr = r'$\lambda R$'
 kappastr = r'$\kappa $'
 errpotstr = r'$E_u$'
 errgradstr = r'$E_g$'
@@ -85,13 +85,15 @@ errlw = 3
 
 # fontsizes for certain types of plots
 
-condfs = 16
-errfs = 16
+condfs = 18
+errfs = 24
 
 
 ##################################################
 # PLOT GEOMETRY
 ##################################################
+
+plt.rcParams.update({'font.size': condfs})
 
 plt.close('all')
 
@@ -161,7 +163,7 @@ l = int(condext[0,0])
 n = int(size(condext,0)/l)
 condmbh = reshape(condmbh,(l,n),order='F')
 condnaive = reshape(condnaive,(l,n),order='F')
-lamsc = reshape(multiply(lam,scale),(l,n),order='F')
+lamsc = 0.5*reshape(multiply(lam,scale),(l,n),order='F')
 lamsc = lamsc[0,:]
 lamsc = lamsc[:]
 
@@ -189,7 +191,7 @@ lr = int(condextrtoz[0,0])
 nr = int(size(condextrtoz,0)/lr)
 condmbhr = reshape(condmbhr,(lr,nr),order='F')
 condnaiver = reshape(condnaiver,(lr,nr),order='F')
-lamscr = reshape(multiply(lamr,scaler),(lr,nr),order='F')
+lamscr = 0.5*reshape(multiply(lamr,scaler),(lr,nr),order='F')
 lamscr = lamscr[0,:]
 lamscr = lamscr[:]
 
@@ -215,7 +217,7 @@ plt.plot(lamsc,cnaive1r,'-x',color=orange1,label=oldfunstrextr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 plt.legend()
 plt.savefig('cond_ext1.pdf',format='pdf',bbox_inches='tight')
@@ -230,7 +232,7 @@ plt.plot(lamsc,cnaive2r,'-x',color=orange1,label=oldfunstrextr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -246,7 +248,7 @@ plt.plot(lamsc,cnaive3r,'-x',color=orange1,label=oldfunstrextr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -262,7 +264,7 @@ plt.plot(lamsc,cnaive4r,'-x',color=orange1,label=oldfunstrextr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -282,7 +284,7 @@ l = int(condint[0,0])
 n = int(size(condint,0)/l)
 condmbh = reshape(condmbh,(l,n),order='F')
 condnaive = reshape(condnaive,(l,n),order='F')
-lamsc = reshape(multiply(lam,scale),(l,n),order='F')
+lamsc = 0.5*reshape(multiply(lam,scale),(l,n),order='F')
 lamsc = lamsc[0,:]
 lamsc = lamsc[:]
 
@@ -310,7 +312,7 @@ lr = int(condintrtoz[0,0])
 nr = int(size(condintrtoz,0)/lr)
 condmbhr = reshape(condmbhr,(lr,nr),order='F')
 condnaiver = reshape(condnaiver,(lr,nr),order='F')
-lamscr = reshape(multiply(lamr,scaler),(lr,nr),order='F')
+lamscr = 0.5*reshape(multiply(lamr,scaler),(lr,nr),order='F')
 lamscr = lamscr[0,:]
 lamscr = lamscr[:]
 
@@ -336,7 +338,7 @@ plt.plot(lamsc,cnaive1r,'-x',color=orange1,label=oldfunstrintr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -352,7 +354,7 @@ plt.plot(lamsc,cnaive2r,'-x',color=orange1,label=oldfunstrintr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -368,7 +370,7 @@ plt.plot(lamsc,cnaive3r,'-x',color=orange1,label=oldfunstrintr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -384,7 +386,7 @@ plt.plot(lamsc,cnaive4r,'-x',color=orange1,label=oldfunstrintr)
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(kappastr)
 
 plt.legend()
@@ -402,7 +404,7 @@ plt.close('all')
 
 lam = potext[:,0]
 scale = potext[:,5]
-lamsc = multiply(lam,scale)
+lamsc = 0.5*multiply(lam,scale)
 ind = argsort(lamsc)
 lamsc = lamsc[ind]
 
@@ -412,7 +414,7 @@ hess = hessext[ind,1:5]
 
 lamr = potextrtoz[:,0]
 scaler = potextrtoz[:,5]
-lamscr = multiply(lamr,scaler)
+lamscr = 0.5*multiply(lamr,scaler)
 indr = argsort(lamscr)
 lamscr = lamscr[indr]
 
@@ -427,7 +429,7 @@ plt.plot(lamsc,pot[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errpotstr)
 
 plt.legend()
@@ -443,7 +445,7 @@ plt.plot(lamscr,potr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errpotstr)
 
 plt.legend()
@@ -458,7 +460,7 @@ plt.plot(lamsc,grad[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errgradstr)
 
 plt.legend()
@@ -474,7 +476,7 @@ plt.plot(lamscr,gradr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errgradstr)
 
 plt.legend()
@@ -489,7 +491,7 @@ plt.plot(lamsc,hess[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errhessstr)
 
 plt.legend()
@@ -505,7 +507,7 @@ plt.plot(lamscr,hessr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errhessstr)
 
 plt.legend()
@@ -519,7 +521,7 @@ plt.close('all')
 
 lam = potint[:,0]
 scale = potint[:,5]
-lamsc = multiply(lam,scale)
+lamsc = 0.5*multiply(lam,scale)
 ind = argsort(lamsc)
 lamsc = lamsc[ind]
 
@@ -529,7 +531,7 @@ hess = hessint[ind,1:5]
 
 lamr = potintrtoz[:,0]
 scaler = potintrtoz[:,5]
-lamscr = multiply(lamr,scaler)
+lamscr = 0.5*multiply(lamr,scaler)
 indr = argsort(lamscr)
 lamscr = lamscr[indr]
 
@@ -544,7 +546,7 @@ plt.plot(lamsc,pot[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errpotstr)
 
 plt.legend()
@@ -560,7 +562,7 @@ plt.plot(lamscr,potr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errpotstr)
 
 plt.legend()
@@ -575,7 +577,7 @@ plt.plot(lamsc,grad[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errgradstr)
 
 plt.legend()
@@ -591,7 +593,7 @@ plt.plot(lamscr,gradr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errgradstr)
 
 plt.legend()
@@ -606,7 +608,7 @@ plt.plot(lamsc,hess[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errhessstr)
 
 plt.legend()
@@ -622,7 +624,7 @@ plt.plot(lamscr,hessr[:,3],stre,color=orange1,label='Exact Difference')
 plt.xscale('log')
 plt.yscale('log')
 plt.tight_layout()
-plt.xlabel(alpharstr)
+plt.xlabel(lambdarstr)
 plt.ylabel(errhessstr)
 
 plt.legend()
@@ -635,7 +637,9 @@ plt.close('all')
 # HEAT MAPS OF EXAMPLE FIELDS
 ##################################################
 
-if (1 == 0):
+plt.rcParams.update({'font.size': errfs})
+
+if (1 == 1):
 
     zheat1 = exampleext[:,0]
     zheat2 = exampleext[:,2]

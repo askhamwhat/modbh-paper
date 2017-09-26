@@ -6,6 +6,7 @@ SRC_DIR = src
 BIN_DIR = bin
 TEST_DIR = test
 TMP_DIR = temp
+FIG_DIR = fig
 
 VPATH = $(SRC_DIR):$(BIN_DIR)
 
@@ -78,3 +79,6 @@ mbhsov_int mbhsov_ext mbhsov_int_rtoz mbhsov_ext_rtoz: lib
 
 printflags: 
 	@echo $(DBG) $(OPENMP)
+
+figures:
+	cd $(FIG_DIR); python figs.py

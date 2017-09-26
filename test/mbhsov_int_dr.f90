@@ -40,6 +40,8 @@
     real *8, allocatable, dimension(:,:) :: quadvec, dir1, dir2, dipvec
     real *8, allocatable, dimension(:) :: quadstr, dipstr, charge
     complex *16, allocatable, dimension(:) :: zdipstr, zcharge
+    real *8, allocatable, dimension(:) :: quadstrraw, dipstrraw, chargeraw
+    complex *16, allocatable, dimension(:) :: zdipstrraw, zchargeraw, zquadstrraw
     real *8, allocatable, dimension(:,:) :: target, source, targplot
     real *8, allocatable, dimension(:,:,:) :: amatsmbh, amatsnaive
     real *8, allocatable, dimension(:) :: condsmbh, condsnaive
@@ -109,8 +111,9 @@
          hessplot(3,ntplot),dmask(ntplot))
     allocate(znrmtarg(2,npts),znrmsrc(2,npts))
     allocate(zquadstr(ns),quadstr(ns),quadvec(3,ns),dir1(2,ns),dir2(2,ns))
-    allocate(zdipstr(ns),zcharge(ns))
-    allocate(dipstr(ns),dipvec(2,ns),charge(ns))
+    allocate(zquadstrraw(ns),quadstrraw(ns))    
+    allocate(zdipstr(ns),zcharge(ns),zdipstrraw(ns),zchargeraw(ns))
+    allocate(dipstr(ns),dipvec(2,ns),charge(ns),dipstrraw(ns),chargeraw(ns))
     allocate(utargex(nt),gradtargex(2,nt),utarg(nt),gradtarg(2,nt))
     allocate(hesstarg(3,nt),hesstargex(3,nt))
     allocate(gradtargloc(2,nt),hesstargloc(3,nt))
@@ -139,8 +142,8 @@
 
     ! type of sources 
 
-    ifcharge = 0
-    ifdipole = 0
+    ifcharge = 1
+    ifdipole = 1
     ifquad = 1
     ifoct = 0
 
@@ -223,8 +226,8 @@
        enddo
        
        ! charge
-       charge(i) = -1.0d0+2.0d0*hkrand(0)
-       zcharge(i) = charge(i)
+       chargeraw(i) = -1.0d0+2.0d0*hkrand(0)
+       zchargeraw(i) = chargeraw(i)
        
        ! dipole
        ! direction
@@ -237,9 +240,9 @@
        dipvec(1,i) = a
        dipvec(2,i) = b
 
-       dipstr(i) = 1.0d0+hkrand(0)
+       dipstrraw(i) = 1.0d0+hkrand(0)
 
-       zdipstr(i) = dipstr(i)*(dipvec(1,i)+eye*dipvec(2,i))
+       zdipstrraw(i) = dipstrraw(i)*(dipvec(1,i)+eye*dipvec(2,i))
 
        ! directions
        a = -0.5d0+hkrand(0)
@@ -261,8 +264,8 @@
        quadvec(2,i) = a*d + b*c
        quadvec(3,i) = b*d
        ! strengths
-       quadstr(i) = 1.0d0+hkrand(0)
-       zquadstr(i) = quadstr(i)
+       quadstrraw(i) = 1.0d0+hkrand(0)
+       zquadstrraw(i) = quadstrraw(i)
     enddo
 
     center = center + zarb
@@ -281,6 +284,15 @@
     ifpot = 1
     ifgrad = 1
     ifhess = 1
+
+    do j = 1,ns
+       charge(j) = chargeraw(j)*lambda**2
+       zcharge(j) = zchargeraw(j)*lambda**2       
+       dipstr(j) = dipstrraw(j)*lambda
+       zdipstr(j) = zdipstrraw(j)*lambda
+       quadstr(j) = quadstrraw(j)
+       zquadstr(j) = zquadstrraw(j)
+    enddo
     
     do i = 1,ntplot
        potplot(i) = 0.0d0
@@ -327,11 +339,20 @@
 
           lambda = 2.0d0**(iiii) + hkrand(0)*2.0d0**(iiii)
 
-          rscale = min(scale*0.5d0*lambda,1.0d0)
-          rscalelap = min(scale*0.5d0,1.0d0)
+          rscale = scale*0.5d0*lambda
+          rscalelap = scale*0.5d0
 
           rad = 0.5d0*scale
 
+          do j = 1,ns
+             charge(j) = chargeraw(j)*lambda**2
+             zcharge(j) = zchargeraw(j)*lambda**2       
+             dipstr(j) = dipstrraw(j)*lambda
+             zdipstr(j) = zdipstrraw(j)*lambda
+             quadstr(j) = quadstrraw(j)
+             zquadstr(j) = zquadstrraw(j)
+          enddo
+          
           ! getting exact values
 
           ifpot = 1
@@ -416,6 +437,9 @@
                   ztarg,nterms,iloc4)
              call l2dformta_add(ier,rscalelap,source,zcharge,ns, &
                   ztarg,nterms,lloc4)
+             do i = 0,nterms
+                lloc4(i) = -lloc4(I)
+             enddo
           endif
           if (ifdipole .eq. 1) then
              call y2dformta_dp_add(ier,lambda,rscale,source,dipstr,dipvec, &

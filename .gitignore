@@ -1,3 +1,5 @@
 *~
 *.o
 fort.*
+*.png
+*.pdf
