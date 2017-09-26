@@ -230,7 +230,7 @@
        dipvec(1,i) = a
        dipvec(2,i) = b
 
-       dipstrraw(i) = 1.0d0+hkrand(0)
+       dipstrraw(i) = hkrand(0)
 
        zdipstrraw(i) = dipstrraw(i)*(dipvec(1,i)+eye*dipvec(2,i))
 
@@ -254,7 +254,7 @@
        quadvec(2,i) = a*d + b*c
        quadvec(3,i) = b*d
        ! strengths
-       quadstrraw(i) = 1.0d0+hkrand(0)
+       quadstrraw(i) = hkrand(0)
        zquadstrraw(i) = quadstrraw(i)
     enddo
 
